@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: claw-commons
+  labels:
+    app.kubernetes.io/name: claw-commons
+  annotations:
+    haproxy.router.openshift.io/timeout: 30m
+spec:
+  to:
+    kind: Service
+    name: claw-commons
+  port:
+    targetPort: oauth-ui
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

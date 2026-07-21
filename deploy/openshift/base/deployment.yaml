@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claw-commons
+  labels:
+    app.kubernetes.io/name: claw-commons
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: claw-commons
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: claw-commons
+    spec:
+      serviceAccountName: claw-commons
+      initContainers:
+        - name: initialize-state
+          image: registry.access.redhat.com/ubi9-minimal:latest
+          command:
+            - sh
+            - -ec
+            - |
+              umask 007
+              mkdir -p /home/node/.openclaw/workspace /home/node/.openclaw/tmp
+              cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+              chmod 600 /home/node/.openclaw/openclaw.json
+          volumeMounts:
+            - name: state
+              mountPath: /home/node
+            - name: config
+              mountPath: /config
+              readOnly: true
+      containers:
+        - name: gateway
+          image: ghcr.io/openclaw/openclaw:latest
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -ec
+            - exec node openclaw.mjs gateway run --bind loopback --port 18789
+          env:
+            - name: HOME
+              value: /home/node
+            - name: NODE_ENV
+              value: production
+            - name: OPENCLAW_CONFIG_DIR
+              value: /home/node/.openclaw
+            - name: OPENCLAW_STATE_DIR
+              value: /home/node/.openclaw
+            - name: OPENCLAW_WORKSPACE_DIR
+              value: /home/node/.openclaw/workspace
+            - name: OPENCLAW_GATEWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: openclaw-internal-auth
+                  key: password
+          envFrom:
+            - secretRef:
+                name: openclaw-provider
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://127.0.0.1:18789/', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 4Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: state
+              mountPath: /home/node
+            - name: tmp
+              mountPath: /tmp
+        - name: oauth-proxy
+          image: quay.io/openshift/origin-oauth-proxy:4.14
+          args:
+            - --http-address=:8443
+            - --https-address=
+            - --provider=openshift
+            - --upstream=http://127.0.0.1:18789
+            - --client-id=system:serviceaccount:claw-commons:claw-commons
+            - --client-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+            - --cookie-secret-file=/etc/oauth/config/cookie_secret
+            - --cookie-expire=23h0m0s
+            - --pass-user-headers=true
+            - --scope=user:info
+          ports:
+            - name: oauth-ui
+              containerPort: 8443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /oauth/healthz
+              port: oauth-ui
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: oauth-config
+              mountPath: /etc/oauth/config
+              readOnly: true
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: claw-commons-state
+        - name: config
+          configMap:
+            name: claw-commons-config
+        - name: oauth-config
+          secret:
+            secretName: openclaw-oauth-config
+        - name: tmp
+          emptyDir: {}

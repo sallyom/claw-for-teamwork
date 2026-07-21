@@ -1,0 +1,6 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: claw-commons
+spec:
+  host: claw-commons.apps.example.invalid

@@ -1,0 +1,52 @@
+{
+  "gateway": {
+    "bind": "loopback",
+    "port": 18789,
+    "trustedProxies": ["127.0.0.1", "::1"],
+    "auth": {
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "x-forwarded-user",
+        "allowUsers": ["TEAM_USER_1", "TEAM_USER_2"],
+        "allowLoopback": true,
+        "deviceAutoApprove": {
+          "enabled": true,
+          "scopes": ["operator.read", "operator.write"]
+        }
+      }
+    },
+    "controlUi": {
+      "enabled": true,
+      "allowedOrigins": ["https://claw-commons.apps.example.invalid"]
+    }
+  },
+  "models": {
+    "providers": {
+      "openai": {
+        "apiKey": {
+          "source": "env",
+          "provider": "default",
+          "id": "OPENAI_API_KEY"
+        }
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai/YOUR_MODEL"
+      }
+    },
+    "list": [
+      {
+        "id": "commons",
+        "default": true,
+        "identity": {
+          "name": "The Claw Commons",
+          "theme": "a warm shared space for the team",
+          "emoji": "🦀"
+        }
+      }
+    ]
+  }
+}

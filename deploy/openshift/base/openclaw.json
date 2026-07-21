@@ -1,0 +1,33 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "port": 18789,
+    "trustedProxies": ["127.0.0.1", "::1"],
+    "auth": {
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "x-forwarded-user",
+        "allowUsers": [],
+        "allowLoopback": true
+      }
+    },
+    "controlUi": {
+      "enabled": true,
+      "allowedOrigins": ["https://claw-commons.example.invalid"]
+    }
+  },
+  "agents": {
+    "list": [
+      {
+        "id": "commons",
+        "default": true,
+        "identity": {
+          "name": "The Claw Commons",
+          "theme": "a warm shared space for the team",
+          "emoji": "🦀"
+        }
+      }
+    ]
+  }
+}

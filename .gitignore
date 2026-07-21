@@ -1,0 +1,4 @@
+.DS_Store
+deploy/openshift/overlays/my-team/
+deploy/openshift/overlays/*/secrets/*.secret.yaml
+deploy/openshift/overlays/*/secrets/*.sealedsecret.yaml

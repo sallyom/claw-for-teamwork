@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: claw-commons
+  labels:
+    app.kubernetes.io/name: claw-commons
+spec:
+  selector:
+    app.kubernetes.io/name: claw-commons
+  ports:
+    - name: oauth-ui
+      port: 8443
+      targetPort: oauth-ui
+      protocol: TCP
